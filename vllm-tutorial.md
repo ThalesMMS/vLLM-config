@@ -776,7 +776,7 @@ sudo bash setup-vllm.sh
 ```bash
 #!/bin/bash
 #
-# Setup script for vLLM + GPT-OSS-20B
+# Setup script for vLLM + Llama 3.2 3B
 # Tested on: Pop!_OS / Ubuntu 24.04 with NVIDIA RTX 5080
 #
 # Usage: sudo bash setup-vllm.sh
@@ -803,7 +803,7 @@ VLLM_HOME="/home/$VLLM_USER"
 VENV_PATH="$VLLM_HOME/vllm-env"
 CUDA_VERSION="12-8"
 
-log "Starting vLLM + GPT-OSS-20B setup for user: $VLLM_USER"
+log "Starting vLLM + Llama 3.2 3B setup for user: $VLLM_USER"
 
 # ============================================================
 # 1. Disable System Sleep (for SSH access)
@@ -868,7 +868,7 @@ log "Creating systemd service..."
 
 cat > /etc/systemd/system/vllm.service << EOF
 [Unit]
-Description=vLLM GPT-OSS-20B Server
+Description=vLLM LLM Server
 After=network.target
 
 [Service]
@@ -877,7 +877,7 @@ User=$VLLM_USER
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 Environment="PATH=/usr/local/cuda-12.8/bin:\$PATH"
 ExecStartPre=/bin/bash -c 'systemctl stop gdm3 cosmic-comp display-manager 2>/dev/null || true'
-ExecStart=$VENV_PATH/bin/vllm serve openai/gpt-oss-20b --port 8000 --max-model-len 512 --max-num-seqs 2 --gpu-memory-utilization 0.95 --enforce-eager
+ExecStart=$VENV_PATH/bin/vllm serve unsloth/Llama-3.2-3B-Instruct --port 8000 --served-model-name default --max-model-len 16384 --max-num-seqs 16 --gpu-memory-utilization 0.90
 Restart=on-failure
 RestartSec=10
 
@@ -895,7 +895,7 @@ log "Creating helper scripts..."
 # Start script
 cat > $VLLM_HOME/start-vllm.sh << 'EOF'
 #!/bin/bash
-# Manual start script for vLLM GPT-OSS-20B
+# Manual start script for vLLM (Llama 3.2 3B)
 
 # Stop display manager to free GPU memory
 sudo systemctl stop gdm3 cosmic-comp display-manager 2>/dev/null || true
@@ -908,12 +908,12 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export PATH=/usr/local/cuda-12.8/bin:$PATH
 
 # Start vLLM
-vllm serve openai/gpt-oss-20b \
+vllm serve unsloth/Llama-3.2-3B-Instruct \
     --port 8000 \
-    --max-model-len 512 \
-    --max-num-seqs 2 \
-    --gpu-memory-utilization 0.95 \
-    --enforce-eager
+    --served-model-name default \
+    --max-model-len 16384 \
+    --max-num-seqs 16 \
+    --gpu-memory-utilization 0.90
 EOF
 
 # Test script
@@ -925,7 +925,7 @@ echo "Testing vLLM server..."
 curl -s http://localhost:8000/v1/chat/completions \
     -H "Content-Type: application/json" \
     -d '{
-        "model": "openai/gpt-oss-20b",
+        "model": "default",
         "messages": [{"role": "user", "content": "Say hello!"}],
         "max_tokens": 50
     }' | python3 -m json.tool
@@ -944,7 +944,7 @@ log "Setup complete!"
 
 echo ""
 echo "============================================================"
-echo "  vLLM + GPT-OSS-20B Installation Complete"
+echo "  vLLM + Llama 3.2 3B Installation Complete"
 echo "============================================================"
 echo ""
 echo "To start the server manually:"
@@ -966,21 +966,21 @@ echo "============================================================"
 Create `vllm-config.yaml` to document the configuration:
 
 ```yaml
-# vLLM GPT-OSS-20B Configuration
+# vLLM Llama 3.2 3B Configuration
 # Use with: vllm serve --config vllm-config.yaml
 
 # Model
-model: openai/gpt-oss-20b
+model: unsloth/Llama-3.2-3B-Instruct
+served_model_name: default
 
 # Server
 port: 8000
 host: 0.0.0.0
 
 # Memory Optimization (for 16GB VRAM)
-max_model_len: 512
-max_num_seqs: 2
-gpu_memory_utilization: 0.95
-enforce_eager: true
+max_model_len: 16384
+max_num_seqs: 16
+gpu_memory_utilization: 0.90
 
 # Environment variables required:
 # PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -993,7 +993,7 @@ enforce_eager: true
 Create `requirements.txt`:
 
 ```text
-# requirements.txt for vLLM + GPT-OSS-20B
+# requirements.txt for vLLM + Llama 3.2 3B
 # Install with: pip install -r requirements.txt
 
 vllm>=0.13.0
@@ -1005,11 +1005,11 @@ Create `run_server.py`:
 ```python
 #!/usr/bin/env python3
 """
-vLLM Server Launcher for GPT-OSS-20B
+vLLM Server Launcher for Llama 3.2 3B
 
 Usage:
     python run_server.py
-    python run_server.py --max-model-len 512
+    python run_server.py --max-model-len 16384
 """
 
 import os
@@ -1018,15 +1018,15 @@ import argparse
 
 # Configuration defaults
 CONFIG = {
-    "model": "openai/gpt-oss-20b",
+    "model": "unsloth/Llama-3.2-3B-Instruct",
     "port": 8000,
-    "max_model_len": 512,
-    "max_num_seqs": 2,
-    "gpu_memory_utilization": 0.95,
+    "max_model_len": 16384,
+    "max_num_seqs": 16,
+    "gpu_memory_utilization": 0.90,
 }
 
 def main():
-    parser = argparse.ArgumentParser(description="Launch vLLM with GPT-OSS-20B")
+    parser = argparse.ArgumentParser(description="Launch vLLM with Llama 3.2 3B")
     parser.add_argument("--port", type=int, default=CONFIG["port"])
     parser.add_argument("--max-model-len", type=int, default=CONFIG["max_model_len"])
     parser.add_argument("--max-num-seqs", type=int, default=CONFIG["max_num_seqs"])
@@ -1041,10 +1041,10 @@ def main():
     cmd = [
         "vllm", "serve", CONFIG["model"],
         "--port", str(args.port),
+        "--served-model-name", "default",
         "--max-model-len", str(args.max_model_len),
         "--max-num-seqs", str(args.max_num_seqs),
         "--gpu-memory-utilization", str(args.gpu_memory_utilization),
-        "--enforce-eager",
     ]
 
     print(f"Starting vLLM server...")
@@ -1058,7 +1058,7 @@ if __name__ == "__main__":
 ### Option 4: Docker (Alternative)
 
 ```dockerfile
-# Dockerfile for vLLM + GPT-OSS-20B
+# Dockerfile for vLLM + Llama 3.2 3B
 FROM nvidia/cuda:12.8.0-devel-ubuntu24.04
 
 # Install Python
@@ -1078,12 +1078,12 @@ ENV PATH="/opt/vllm-env/bin:$PATH"
 EXPOSE 8000
 
 # Default command
-CMD ["vllm", "serve", "openai/gpt-oss-20b", \
+CMD ["vllm", "serve", "unsloth/Llama-3.2-3B-Instruct", \
      "--port", "8000", \
-     "--max-model-len", "512", \
-     "--max-num-seqs", "2", \
-     "--gpu-memory-utilization", "0.95", \
-     "--enforce-eager"]
+     "--served-model-name", "default", \
+     "--max-model-len", "16384", \
+     "--max-num-seqs", "16", \
+     "--gpu-memory-utilization", "0.90"]
 ```
 
 **Run with Docker:**

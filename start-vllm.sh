@@ -144,7 +144,7 @@ start_server() {
     # Build command
     # --served-model-name lets you use "default" instead of the full model name
     # --chat-template adds support for OpenAI-style system messages
-    cmd="vllm serve $model_id --port 8000 --served-model-name default --max-model-len $max_model_len --max-num-seqs $max_num_seqs --gpu-memory-utilization $gpu_mem_util"
+    cmd="vllm serve $model_id --port 8000 --served-model-name default --generation-config vllm --max-model-len $max_model_len --max-num-seqs $max_num_seqs --gpu-memory-utilization $gpu_mem_util"
 
     # Add chat template if specified
     if [ -n "$chat_template" ]; then
