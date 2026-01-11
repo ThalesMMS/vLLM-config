@@ -1,0 +1,18 @@
+{#- Mistral Instruct chat template with system message support -#}
+{%- if messages[0]['role'] == 'system' -%}
+    {%- set system_message = messages[0]['content'] -%}
+    {%- set messages = messages[1:] -%}
+{%- else -%}
+    {%- set system_message = '' -%}
+{%- endif -%}
+
+<s>
+{%- for message in messages -%}
+    {%- if message['role'] == 'user' -%}
+[INST] {% if loop.first and system_message %}{{ system_message }}
+
+{% endif %}{{ message['content'] }} [/INST]
+    {%- elif message['role'] == 'assistant' -%}
+{{ message['content'] }}</s>
+    {%- endif -%}
+{%- endfor -%}

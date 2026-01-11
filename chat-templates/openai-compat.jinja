@@ -1,0 +1,22 @@
+{#- OpenAI-compatible chat template with system message support -#}
+{%- if messages[0]['role'] == 'system' -%}
+    {%- set system_message = messages[0]['content'] -%}
+    {%- set messages = messages[1:] -%}
+{%- else -%}
+    {%- set system_message = '' -%}
+{%- endif -%}
+
+{%- if system_message -%}
+{{ system_message }}
+
+{%- endif -%}
+{%- for message in messages -%}
+    {%- if message['role'] == 'user' -%}
+User: {{ message['content'] }}
+
+    {%- elif message['role'] == 'assistant' -%}
+Assistant: {{ message['content'] }}
+
+    {%- endif -%}
+{%- endfor -%}
+Assistant:
