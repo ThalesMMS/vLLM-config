@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ./test-vllm.sh              # Auto-detect model
-#   ./test-vllm.sh gptoss       # Test GPT-OSS-20B
+#   ./test-vllm.sh llama        # Test Llama 3.2 3B
 #   ./test-vllm.sh phi4         # Test Phi-4-mini
 #
 
@@ -17,7 +17,7 @@ NC='\033[0m'
 
 # Available models
 declare -A MODELS
-MODELS[gptoss]="openai/gpt-oss-20b"
+MODELS[llama]="meta-llama/Llama-3.2-3B-Instruct"
 MODELS[phi4]="microsoft/Phi-4-mini-instruct"
 
 echo -e "${CYAN}=== Testing vLLM server ===${NC}"
@@ -33,9 +33,9 @@ fi
 # Detect model or use argument
 if [ -n "$1" ]; then
     case "$1" in
-        gptoss|gpt) MODEL="${MODELS[gptoss]}" ;;
+        llama|llama32) MODEL="${MODELS[llama]}" ;;
         phi4|phi) MODEL="${MODELS[phi4]}" ;;
-        *) echo "Usage: $0 [gptoss|phi4]"; exit 1 ;;
+        *) echo "Usage: $0 [llama|phi4]"; exit 1 ;;
     esac
 else
     # Auto-detect by querying the server

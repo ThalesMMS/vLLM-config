@@ -1,11 +1,11 @@
 #!/bin/bash
 #
 # Start script for vLLM Server
-# Supports multiple models: GPT-OSS-20B and Phi-4-mini
+# Supports multiple models: Llama 3.2 3B and Phi-4-mini
 #
 # Usage:
 #   ./start-vllm.sh              # Interactive menu
-#   ./start-vllm.sh gptoss       # Direct GPT-OSS-20B
+#   ./start-vllm.sh llama        # Direct Llama 3.2 3B
 #   ./start-vllm.sh phi4         # Direct Phi-4-mini
 #
 
@@ -25,22 +25,22 @@ NC='\033[0m'
 
 # Model configuration
 declare -A MODELS
-MODELS[gptoss]="openai/gpt-oss-20b"
+MODELS[llama]="meta-llama/Llama-3.2-3B-Instruct"
 MODELS[phi4]="microsoft/Phi-4-mini-instruct"
 
 declare -A MODEL_CONFIGS
 # Format: "max_model_len:max_num_seqs:gpu_mem_util:enforce_eager"
-MODEL_CONFIGS[gptoss]="512:2:0.95:true"      # Higher context; more VRAM pressure
+MODEL_CONFIGS[llama]="16384:16:0.90:false"    # 3B model (~3GB VRAM, 128K context)
 MODEL_CONFIGS[phi4]="16384:16:0.90:false"     # 3.8B model (~3GB VRAM, 128K context)
 
-# Chat templates for system message support (GPT-OSS uses the built-in template)
+# Chat templates for system message support
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 declare -A CHAT_TEMPLATES
-CHAT_TEMPLATES[gptoss]=""
+CHAT_TEMPLATES[llama]=""      # Uses built-in chat template
 CHAT_TEMPLATES[phi4]=""       # Uses built-in chat template
 
 declare -A MODEL_NAMES
-MODEL_NAMES[gptoss]="GPT-OSS-20B (OpenAI)"
+MODEL_NAMES[llama]="Llama 3.2 3B Instruct (Meta)"
 MODEL_NAMES[phi4]="Phi-4-mini-instruct (3.8B)"
 
 show_menu() {
@@ -48,9 +48,9 @@ show_menu() {
     echo ""
     echo "Available models:"
     echo ""
-    echo -e "  ${GREEN}1)${NC} GPT-OSS-20B (OpenAI)"
-    echo "     - 21B params (3.6B active), MXFP4"
-    echo "     - VRAM: ~14.6GB | Context: 512 tokens"
+    echo -e "  ${GREEN}1)${NC} Llama 3.2 3B Instruct (Meta)"
+    echo "     - 3B params, tool calling support"
+    echo "     - VRAM: ~3GB | Context: 128K tokens"
     echo ""
     echo -e "  ${GREEN}2)${NC} Phi-4-mini-instruct (3.8B)"
     echo "     - 3.8B params, excellent reasoning"
@@ -65,7 +65,7 @@ select_model() {
         show_menu
         read -p "Choose a model [1/2/0]: " choice
         case $choice in
-            1) MODEL_KEY="gptoss"; break ;;
+            1) MODEL_KEY="llama"; break ;;
             2) MODEL_KEY="phi4"; break ;;
             0) echo "Exiting."; exit 0 ;;
             *) echo -e "${YELLOW}Invalid option. Try again.${NC}"; echo "" ;;
@@ -176,9 +176,9 @@ start_server() {
 if [ -n "$1" ]; then
     # Argument passed directly
     case "$1" in
-        gptoss|gpt|1) MODEL_KEY="gptoss" ;;
+        llama|llama32|1) MODEL_KEY="llama" ;;
         phi4|phi|2) MODEL_KEY="phi4" ;;
-        *) echo "Usage: $0 [gptoss|phi4]"; exit 1 ;;
+        *) echo "Usage: $0 [llama|phi4]"; exit 1 ;;
     esac
 else
     # Interactive menu
