@@ -25,7 +25,7 @@ NC='\033[0m'
 
 # Model configuration
 declare -A MODELS
-MODELS[llama]="meta-llama/Llama-3.2-3B-Instruct"
+MODELS[llama]="unsloth/Llama-3.2-3B-Instruct"
 MODELS[phi4]="microsoft/Phi-4-mini-instruct"
 
 declare -A MODEL_CONFIGS

@@ -17,7 +17,7 @@ NC='\033[0m'
 
 # Available models
 declare -A MODELS
-MODELS[llama]="meta-llama/Llama-3.2-3B-Instruct"
+MODELS[llama]="unsloth/Llama-3.2-3B-Instruct"
 MODELS[phi4]="microsoft/Phi-4-mini-instruct"
 
 echo -e "${CYAN}=== Testing vLLM server ===${NC}"

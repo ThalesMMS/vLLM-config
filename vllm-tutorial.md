@@ -36,14 +36,14 @@ Before running the installation script, the new system **must have**:
 
 ```bash
 # 1. Copy the 4 files to the new system
-scp setup-vllm-gptoss.sh start-vllm.sh test-vllm.sh vllm-gpt-oss-tutorial.md user@new-pc:~
+scp setup-vllm.sh start-vllm.sh test-vllm.sh vllm-tutorial.md user@new-pc:~
 
 # 2. On the new system, verify prerequisites
 nvidia-smi                    # Should work
 df -h ~/.cache                # Check space
 
 # 3. Run the installation script (installs CUDA, vLLM, configures the system)
-sudo bash ~/setup-vllm-gptoss.sh
+sudo bash ~/setup-vllm.sh
 
 # 4. Copy the improved scripts (multi-model menu)
 cp ~/start-vllm.sh ~/start-vllm.sh
@@ -61,10 +61,10 @@ chmod +x ~/start-vllm.sh ~/test-vllm.sh
 
 | File | Required | Purpose |
 |------|----------|---------|
-| `setup-vllm-gptoss.sh` | ✅ Yes | Full installation (CUDA, vLLM, systemd) |
+| `setup-vllm.sh` | ✅ Yes | Full installation (CUDA, vLLM, systemd) |
 | `start-vllm.sh` | ✅ Yes | Start server (menu with 2 models) |
 | `test-vllm.sh` | Optional | Test whether the server responds |
-| `vllm-gpt-oss-tutorial.md` | Optional | Documentation/reference |
+| `vllm-tutorial.md` | Optional | Documentation/reference |
 
 ---
 
@@ -72,7 +72,7 @@ chmod +x ~/start-vllm.sh ~/test-vllm.sh
 
 | Model | Params | VRAM | Context | Use |
 |-------|--------|------|---------|-----|
-| **GPT-OSS-20B** | 21B (3.6B active) | ~14.6GB | 512 tokens | Advanced reasoning |
+| **Llama 3.2 3B Instruct** | 3B | ~3GB | 128K tokens | Tool calling, chat |
 | **Phi-4-mini-instruct** | 3.8B | ~3GB | 128K tokens | Reasoning, fast |
 
 ## System Requirements
@@ -147,11 +147,11 @@ This installs vLLM v0.13.0 along with all dependencies including:
 - CUDA libraries (bundled)
 - Transformers, tokenizers, etc.
 
-## Running GPT-OSS-20B
+## Running Models
 
 ### Important: Free GPU Memory First
 
-GPT-OSS-20B requires nearly all 16GB of VRAM. If you're running a desktop environment, stop it first:
+For optimal performance, stop the display manager to free GPU memory:
 
 ```bash
 # Stop display manager to free GPU memory
@@ -176,9 +176,9 @@ The script shows a menu to choose the model:
 
 Available models:
 
-  1) GPT-OSS-20B (OpenAI)
-     - 21B params (3.6B active), MXFP4
-     - VRAM: ~14.6GB | Context: 512 tokens
+  1) Llama 3.2 3B Instruct (Meta)
+     - 3B params, tool calling support
+     - VRAM: ~3GB | Context: 128K tokens
 
   2) Phi-4-mini-instruct (3.8B)
      - 3.8B params, excellent reasoning
@@ -192,14 +192,14 @@ Choose a model [1/2/0]:
 **Direct method** (no menu):
 
 ```bash
-# GPT-OSS-20B
-/home/user/start-vllm.sh gptoss
+# Llama 3.2 3B
+/home/user/start-vllm.sh llama
 
 # Phi-4-mini
 /home/user/start-vllm.sh phi4
 ```
 
-**Manual method** (individual commands for GPT-OSS-20B):
+**Manual method** (individual commands):
 
 ```bash
 # 1. Stop display manager to free VRAM
@@ -211,15 +211,14 @@ source /root/vllm-env/bin/activate
 # 3. Required environment variable
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 
-# 4. Start server (GPT-OSS-20B)
-vllm serve openai/gpt-oss-20b \
+# 4. Start server (Llama 3.2 3B)
+vllm serve unsloth/Llama-3.2-3B-Instruct \
   --port 8000 \
-  --max-model-len 512 \
-  --max-num-seqs 2 \
-  --gpu-memory-utilization 0.95 \
-  --enforce-eager
+  --max-model-len 16384 \
+  --max-num-seqs 16 \
+  --gpu-memory-utilization 0.90
 
-# Or for Phi-4-mini (optimized configuration):
+# Or for Phi-4-mini:
 vllm serve microsoft/Phi-4-mini-instruct \
   --port 8000 \
   --max-model-len 16384 \
@@ -247,20 +246,20 @@ vllm serve microsoft/Phi-4-mini-instruct \
 **Manual test via cURL:**
 
 ```bash
-# For GPT-OSS-20B:
+# Using --served-model-name default (recommended):
 curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-oss-20b",
+    "model": "default",
     "messages": [{"role": "user", "content": "What is 2+2?"}],
     "max_tokens": 50
   }' | python3 -m json.tool
 
-# For Phi-4-mini:
+# Or using full model name (Llama 3.2 3B):
 curl -s http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "microsoft/Phi-4-mini-instruct",
+    "model": "unsloth/Llama-3.2-3B-Instruct",
     "messages": [{"role": "user", "content": "What is 2+2?"}],
     "max_tokens": 50
   }' | python3 -m json.tool
@@ -270,14 +269,13 @@ curl -s http://localhost:8000/v1/chat/completions \
 
 ```json
 {
-    "id": "chatcmpl-86ae8122ce4fbbae",
-    "model": "openai/gpt-oss-20b",
+    "id": "chatcmpl-b4cc7de53622ebbe",
+    "model": "default",
     "choices": [
         {
             "message": {
                 "role": "assistant",
-                "content": "4",
-                "reasoning": "User asks \"What is 2+2? Answer briefly.\" So answer: \"4.\" Brief."
+                "content": "4"
             },
             "finish_reason": "stop"
         }
@@ -287,7 +285,7 @@ curl -s http://localhost:8000/v1/chat/completions \
 
 ## Optimization Strategies Used
 
-This 20B parameter model runs on 16GB of VRAM thanks to **7 optimization techniques** applied together. Below, each strategy is detailed in the order it impacts the system.
+These lightweight models (~3B parameters each) run comfortably on 16GB of VRAM with room to spare. Below are optimization techniques that can be applied for larger models.
 
 ---
 
@@ -616,19 +614,21 @@ vllm serve openai/gpt-oss-20b --cpu-offload-gb 10  # FAILED
 
 ## Model Details
 
-### GPT-OSS-20B Specifications
+### Llama 3.2 3B Instruct Specifications
 
-- **Parameters**: 21B total, 3.6B active (Mixture of Experts)
-- **Quantization**: MXFP4 (MicroScaling FP4)
-- **VRAM Usage**: ~14.6GB for weights + ~1GB KV cache
-- **Context**: 512 tokens (limited by VRAM)
-- **License**: Apache 2.0
-- **Model Size on Disk**: ~41GB
+- **Parameters**: 3B (dense)
+- **Quantization**: FP16 (native)
+- **VRAM Usage**: ~3GB for weights + KV cache
+- **Context**: 128K tokens (very large)
+- **License**: Llama 3.2 Community License
+- **Model Size on Disk**: ~6GB
+- **HuggingFace ID**: `unsloth/Llama-3.2-3B-Instruct`
 
 **Key Features:**
-- Configurable reasoning with visible chain-of-thought
-- Native function calling support
-- OpenAI Harmony response format
+- Native tool/function calling support
+- Excellent for agentic applications
+- Multilingual support
+- Fast inference (small model)
 
 ### Phi-4-mini-instruct Specifications
 
@@ -649,13 +649,14 @@ vllm serve openai/gpt-oss-20b --cpu-offload-gb 10  # FAILED
 
 ### Model Comparison
 
-| Aspect | GPT-OSS-20B | Phi-4-mini-instruct |
-|--------|-------------|---------------------|
-| **VRAM** | ~14.6GB | ~3GB |
-| **Context** | 512 tokens | 128K tokens |
-| **Speed** | Moderate | Fast |
-| **Reasoning** | Excellent (CoT) | Excellent |
-| **Ideal use** | Complex tasks | Coding, reasoning, chat |
+| Aspect | Llama 3.2 3B | Phi-4-mini-instruct |
+|--------|--------------|---------------------|
+| **VRAM** | ~3GB | ~3GB |
+| **Context** | 128K tokens | 128K tokens |
+| **Speed** | Fast | Fast |
+| **Reasoning** | Good | Excellent |
+| **Tool calling** | Native | Supported |
+| **Ideal use** | Agentic, chat | Coding, reasoning |
 
 ## Troubleshooting
 
@@ -700,7 +701,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="openai/gpt-oss-20b",
+    model="default",
     messages=[{"role": "user", "content": "Explain quantum computing briefly"}],
     max_tokens=200
 )
@@ -713,7 +714,7 @@ print(response.choices[0].message.content)
 curl -N http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-oss-20b",
+    "model": "default",
     "messages": [{"role": "user", "content": "Write a haiku about coding"}],
     "stream": true
   }'
@@ -724,16 +725,16 @@ curl -N http://localhost:8000/v1/chat/completions \
 Create a systemd service for auto-start:
 
 ```bash
-sudo tee /etc/systemd/system/vllm-gptoss.service << 'EOF'
+sudo tee /etc/systemd/system/vllm.service << 'EOF'
 [Unit]
-Description=vLLM GPT-OSS-20B Server
+Description=vLLM LLM Server
 After=network.target
 
 [Service]
 Type=simple
 User=root
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
-ExecStart=/root/vllm-env/bin/vllm serve openai/gpt-oss-20b --port 8000 --max-model-len 512 --max-num-seqs 2 --gpu-memory-utilization 0.95 --enforce-eager
+ExecStart=/root/vllm-env/bin/vllm serve unsloth/Llama-3.2-3B-Instruct --port 8000 --served-model-name default --max-model-len 16384 --max-num-seqs 16 --gpu-memory-utilization 0.90
 Restart=on-failure
 RestartSec=10
 
@@ -742,8 +743,8 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable vllm-gptoss
-sudo systemctl start vllm-gptoss
+sudo systemctl enable vllm
+sudo systemctl start vllm
 ```
 
 ## Reproducibility and Automation
@@ -752,16 +753,16 @@ This section provides scripts and configurations to replicate this setup on othe
 
 ### Option 1: Full Bash Script (Recommended)
 
-**File available at:** `/home/user/setup-vllm-gptoss.sh`
+**File available at:** `/home/user/setup-vllm.sh`
 
 **To use on another machine:**
 ```bash
 # 1. Copy to the new machine
-scp /home/user/setup-vllm-gptoss.sh user@new-machine:~
+scp /home/user/setup-vllm.sh user@new-machine:~
 
 # 2. Run on the new machine
 ssh user@new-machine
-sudo bash setup-vllm-gptoss.sh
+sudo bash setup-vllm.sh
 
 # 3. Start the server (first run downloads ~50GB)
 ~/start-vllm.sh
@@ -770,7 +771,7 @@ sudo bash setup-vllm-gptoss.sh
 ~/test-vllm.sh
 ```
 
-**Script contents** `setup-vllm-gptoss.sh`:
+**Script contents** `setup-vllm.sh`:
 
 ```bash
 #!/bin/bash
@@ -778,7 +779,7 @@ sudo bash setup-vllm-gptoss.sh
 # Setup script for vLLM + GPT-OSS-20B
 # Tested on: Pop!_OS / Ubuntu 24.04 with NVIDIA RTX 5080
 #
-# Usage: sudo bash setup-vllm-gptoss.sh
+# Usage: sudo bash setup-vllm.sh
 #
 
 set -e  # Exit on error
@@ -865,7 +866,7 @@ sudo -u $VLLM_USER $VENV_PATH/bin/pip install vllm
 # ============================================================
 log "Creating systemd service..."
 
-cat > /etc/systemd/system/vllm-gptoss.service << EOF
+cat > /etc/systemd/system/vllm.service << EOF
 [Unit]
 Description=vLLM GPT-OSS-20B Server
 After=network.target
@@ -950,8 +951,8 @@ echo "To start the server manually:"
 echo "  ~/start-vllm.sh"
 echo ""
 echo "To start as a service:"
-echo "  sudo systemctl start vllm-gptoss"
-echo "  sudo systemctl enable vllm-gptoss  # Auto-start on boot"
+echo "  sudo systemctl start vllm"
+echo "  sudo systemctl enable vllm  # Auto-start on boot"
 echo ""
 echo "To test the server:"
 echo "  ~/test-vllm.sh"
@@ -1087,8 +1088,8 @@ CMD ["vllm", "serve", "openai/gpt-oss-20b", \
 
 **Run with Docker:**
 ```bash
-docker build -t vllm-gptoss .
-docker run --gpus all -p 8000:8000 -v ~/.cache/huggingface:/root/.cache/huggingface vllm-gptoss
+docker build -t vllm .
+docker run --gpus all -p 8000:8000 -v ~/.cache/huggingface:/root/.cache/huggingface vllm
 ```
 
 ### Reproducibility Checklist
@@ -1112,10 +1113,10 @@ Use this checklist when configuring a new machine:
 
 ```
 /home/user/
-├── setup-vllm-gptoss.sh          # ✅ Installation script (for new machines)
+├── setup-vllm.sh          # ✅ Installation script (for new machines)
 ├── start-vllm.sh                 # ✅ Script to start the server
 ├── test-vllm.sh                  # ✅ Script to test the server
-├── vllm-gpt-oss-tutorial.md      # ✅ This tutorial/documentation
+├── vllm-tutorial.md      # ✅ This tutorial/documentation
 │
 /root/
 └── vllm-env/                     # ✅ Virtual environment with vLLM
@@ -1123,23 +1124,27 @@ Use this checklist when configuring a new machine:
 /etc/systemd/logind.conf.d/
 └── nosleep.conf                  # ✅ Anti-sleep configuration
 
-# Created by setup-vllm-gptoss.sh on new machines:
+# Created by setup-vllm.sh on new machines:
 # ~/vllm-env/                     # Virtual environment
 # ~/start-vllm.sh                 # Start script
 # ~/test-vllm.sh                  # Test script
-# /etc/systemd/system/vllm-gptoss.service
+# /etc/systemd/system/vllm.service
 ```
 
 ## Summary
 
-Successfully running GPT-OSS-20B on a 16GB GPU requires:
+Successfully running LLMs locally on a 16GB GPU:
 
-1. **CUDA 12.8+** for Blackwell architecture support
-2. **Stopping display manager** to free GPU memory
-3. **Minimal vLLM settings** (low max-model-len, max-num-seqs)
-4. **enforce-eager mode** to avoid CUDA graph memory overhead
+**Current Models:**
+- **Llama 3.2 3B Instruct**: Tool calling, agentic applications, chat
+- **Phi-4-mini-instruct**: Excellent reasoning, coding, mathematics
 
-The model provides excellent reasoning capabilities with visible chain-of-thought, making it ideal for local AI development and experimentation.
+**Key Requirements:**
+1. **CUDA 12.8+** for Blackwell architecture support (RTX 50-series)
+2. **vLLM 0.13.0+** for optimal performance
+3. **HuggingFace models** downloaded to cache
+
+Both models are lightweight (~3GB VRAM each) and support 128K context, making them ideal for local AI development and experimentation.
 
 ---
 

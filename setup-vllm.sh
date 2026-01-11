@@ -1,9 +1,10 @@
 #!/bin/bash
 #
-# Setup script for vLLM + GPT-OSS-20B
+# Setup script for vLLM Server
+# Installs vLLM and dependencies for running local LLMs
 # Tested on: Pop!_OS / Ubuntu 24.04 with NVIDIA RTX 5080
 #
-# Usage: sudo bash setup-vllm-gptoss.sh
+# Usage: sudo bash setup-vllm.sh
 #
 
 set -e  # Exit on error
@@ -28,7 +29,7 @@ VLLM_HOME="/home/$VLLM_USER"
 VENV_PATH="$VLLM_HOME/vllm-env"
 CUDA_VERSION="12-8"
 
-log "Starting vLLM + GPT-OSS-20B setup for user: $VLLM_USER"
+log "Starting vLLM setup for user: $VLLM_USER"
 
 # ============================================================
 # 1. Disable System Sleep (for SSH access)
@@ -96,18 +97,18 @@ sudo -u "$VLLM_USER" "$VENV_PATH/bin/pip" install vllm
 # ============================================================
 log "Creating systemd service..."
 
-cat > /etc/systemd/system/vllm-gptoss.service << EOF
+cat > /etc/systemd/system/vllm.service << EOF
 [Unit]
-Description=vLLM GPT-OSS-20B Server
+Description=vLLM LLM Server
 After=network.target
 
 [Service]
 Type=simple
-User=$VLLM_USER
+User=root
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 Environment="PATH=/usr/local/cuda-12.8/bin:/usr/bin:/bin"
 ExecStartPre=/bin/bash -c 'systemctl stop gdm3 cosmic-comp display-manager 2>/dev/null || true'
-ExecStart=$VENV_PATH/bin/vllm serve openai/gpt-oss-20b --port 8000 --max-model-len 512 --max-num-seqs 2 --gpu-memory-utilization 0.95 --enforce-eager
+ExecStart=$VENV_PATH/bin/vllm serve unsloth/Llama-3.2-3B-Instruct --port 8000 --served-model-name default --max-model-len 16384 --max-num-seqs 16 --gpu-memory-utilization 0.90
 Restart=on-failure
 RestartSec=10
 
@@ -118,80 +119,28 @@ EOF
 systemctl daemon-reload
 
 # ============================================================
-# 7. Create Helper Scripts
-# ============================================================
-log "Creating helper scripts..."
-
-# Start script
-cat > "$VLLM_HOME/start-vllm.sh" << 'EOF'
-#!/bin/bash
-# Manual start script for vLLM GPT-OSS-20B
-
-# Stop display manager to free GPU memory
-sudo systemctl stop gdm3 cosmic-comp display-manager 2>/dev/null || true
-
-# Activate environment
-source ~/vllm-env/bin/activate
-
-# Set environment variables
-export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export PATH=/usr/local/cuda-12.8/bin:$PATH
-
-# Start vLLM
-vllm serve openai/gpt-oss-20b \
-    --port 8000 \
-    --max-model-len 512 \
-    --max-num-seqs 2 \
-    --gpu-memory-utilization 0.95 \
-    --enforce-eager
-EOF
-
-# Test script
-cat > "$VLLM_HOME/test-vllm.sh" << 'EOF'
-#!/bin/bash
-# Test if vLLM server is responding
-
-echo "Testing vLLM server..."
-response=$(curl -s http://localhost:8000/v1/chat/completions \
-    -H "Content-Type: application/json" \
-    -d '{
-        "model": "openai/gpt-oss-20b",
-        "messages": [{"role": "user", "content": "Say hello!"}],
-        "max_tokens": 50
-    }')
-
-if echo "$response" | python3 -m json.tool 2>/dev/null; then
-    echo ""
-    echo "Server is working!"
-else
-    echo "Error: Server not responding or returned invalid JSON"
-    echo "Response: $response"
-    exit 1
-fi
-EOF
-
-chmod +x "$VLLM_HOME/start-vllm.sh" "$VLLM_HOME/test-vllm.sh"
-chown "$VLLM_USER:$VLLM_USER" "$VLLM_HOME/start-vllm.sh" "$VLLM_HOME/test-vllm.sh"
-
-# ============================================================
-# 8. Summary
+# 7. Summary
 # ============================================================
 log "Setup complete!"
 
 echo ""
 echo "============================================================"
-echo "  vLLM + GPT-OSS-20B Installation Complete"
+echo "  vLLM Installation Complete"
 echo "============================================================"
+echo ""
+echo "Available models:"
+echo "  - Llama 3.2 3B Instruct (unsloth/Llama-3.2-3B-Instruct)"
+echo "  - Phi-4-mini-instruct (microsoft/Phi-4-mini-instruct)"
 echo ""
 echo "To start the server manually:"
 echo "  ~/start-vllm.sh"
 echo ""
 echo "To start as a service:"
-echo "  sudo systemctl start vllm-gptoss"
-echo "  sudo systemctl enable vllm-gptoss  # Auto-start on boot"
+echo "  sudo systemctl start vllm"
+echo "  sudo systemctl enable vllm  # Auto-start on boot"
 echo ""
 echo "To test the server:"
 echo "  ~/test-vllm.sh"
 echo ""
-echo "NOTE: First run will download ~50GB of model files."
+echo "NOTE: First run will download model files (~6-8GB each)."
 echo "============================================================"
