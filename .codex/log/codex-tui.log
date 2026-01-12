@@ -1,0 +1,5 @@
+2026-01-12T18:35:02.352782Z  INFO codex_tui::onboarding::auth: Esc pressed
+2026-01-12T18:35:08.769500Z  INFO codex_tui::onboarding::auth: Esc pressed
+2026-01-12T18:35:10.269654Z  INFO codex_tui::onboarding::auth: Esc pressed
+2026-01-12T18:35:11.587359Z  INFO codex_tui::onboarding::auth: Esc pressed
+2026-01-12T18:37:19.666536Z  INFO codex_core::config: cwd not set, using current dir

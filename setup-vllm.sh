@@ -108,7 +108,7 @@ User=root
 Environment="PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
 Environment="PATH=/usr/local/cuda-12.8/bin:/usr/bin:/bin"
 ExecStartPre=/bin/bash -c 'systemctl stop gdm3 cosmic-comp display-manager 2>/dev/null || true'
-ExecStart=$VENV_PATH/bin/vllm serve unsloth/Llama-3.2-3B-Instruct --port 8000 --served-model-name default --generation-config vllm --max-model-len 16384 --max-num-seqs 16 --gpu-memory-utilization 0.90
+ExecStart=$VENV_PATH/bin/vllm serve unsloth/Llama-3.2-3B-Instruct --port 8000 --served-model-name default --generation-config vllm --max-model-len 65536 --max-num-seqs 32 --gpu-memory-utilization 0.92
 Restart=on-failure
 RestartSec=10
 

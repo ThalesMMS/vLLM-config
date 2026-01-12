@@ -9,7 +9,8 @@ thinclient_drives
 Music/
 Public/
 Videos/
-
+sglang-config/
+sglang-env/
 # System and configuration files
 .ICEauthority
 .Xauthority

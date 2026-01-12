@@ -17,6 +17,10 @@ if [ "$EUID" -ne 0 ]; then
     exec sudo "$0" "$@"
 fi
 
+# Capture the original user's home directory
+ORIGINAL_USER="${SUDO_USER:-$USER}"
+ORIGINAL_HOME=$(eval echo ~$ORIGINAL_USER)
+
 # Output colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -30,8 +34,9 @@ MODELS[phi4]="microsoft/Phi-4-mini-instruct"
 
 declare -A MODEL_CONFIGS
 # Format: "max_model_len:max_num_seqs:gpu_mem_util:enforce_eager"
-MODEL_CONFIGS[llama]="16384:16:0.90:false"    # 3B model (~3GB VRAM, 128K context)
-MODEL_CONFIGS[phi4]="16384:16:0.90:false"     # 3.8B model (~3GB VRAM, 128K context)
+# OPTIMIZED FOR RTX 5080 (16GB VRAM)
+MODEL_CONFIGS[llama]="65536:32:0.92:false"    # 3B model - 64K context, high concurrency
+MODEL_CONFIGS[phi4]="65536:32:0.92:false"     # 3.8B model - 64K context, high concurrency
 
 # Chat templates for system message support
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -136,7 +141,7 @@ start_server() {
 
     # Activate virtual environment
     echo "Activating virtual environment..."
-    source ~/vllm-env/bin/activate
+    source $ORIGINAL_HOME/vllm-env/bin/activate
 
     # Required environment variable
     export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
