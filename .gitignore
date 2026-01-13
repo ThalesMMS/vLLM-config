@@ -37,3 +37,5 @@ sglang-env/
 .claude.json.backup
 .claude/
 
+.DS_Store
+
